@@ -8,18 +8,37 @@ This script demonstrates the full SACI pipeline:
 4. Running UMAP with the optimal subset
 """
 
+import os
 import sys
 import scanpy as sc
 import matplotlib.pyplot as plt
 
-# If testing locally before pip install
-sys.path.append('../')
+# Dynamically add the parent directory (SACI root) to python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.abspath(os.path.join(current_dir, '..'))
+sys.path.insert(0, parent_dir)
+
 from saci import SACI
 
 def main():
-    print("Loading h5ad file...")
-    # Replace with the actual path to your dataset
-    adata = sc.read_h5ad('../f7dac462-d4a0-41d1-9e2c-fd513fdcd648.h5ad')
+    h5ad_file = 'f7dac462-d4a0-41d1-9e2c-fd513fdcd648.h5ad'
+    
+    # Check if dataset exists in current or parent directory
+    if os.path.exists(h5ad_file):
+        file_path = h5ad_file
+    elif os.path.exists(f'../{h5ad_file}'):
+        file_path = f'../{h5ad_file}'
+    else:
+        print("===============================================================")
+        print("Dataset not found!")
+        print("Please download the Leishmania PBMC dataset from CZI CELLxGENE:")
+        print(f"URL: https://datasets.cellxgene.cziscience.com/{h5ad_file}")
+        print("Save it in the same directory as this script and run again.")
+        print("===============================================================")
+        sys.exit(1)
+
+    print(f"Loading {file_path}...")
+    adata = sc.read_h5ad(file_path)
 
     # Prepare data
     if 'feature_name' in adata.var.columns:
