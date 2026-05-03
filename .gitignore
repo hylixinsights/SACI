@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Data files (too large for git)
+*.h5ad
+*.h5
+*.loom
+data/
+
+# Output files
+*.png
+*.pdf
+*.svg
+
+# Scratch / temporary files
+scratch_*
+*.out
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/

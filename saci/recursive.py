@@ -269,7 +269,7 @@ class SACI:
             leaves = [v for v in tree.values() if v["is_leaf"]]
             internals = [v for v in tree.values() if not v["is_leaf"]]
             print(f"\n{'=' * 50}")
-            print(f"RecursiveMGS Summary")
+            print(f"SACI Summary")
             print(f"  Internal nodes: {len(internals)}")
             print(f"  Leaf clusters:  {len(leaves)}")
             print(f"  Total genes:    {len(all_genes_ordered)}")
