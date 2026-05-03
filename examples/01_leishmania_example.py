@@ -1,8 +1,36 @@
 """
 Example 01: SACI Analysis on Leishmania PBMC dataset
 
-This script demonstrates the full SACI pipeline:
-1. Data preprocessing
+This script demonstrates the full SACI pipeline on a modern, high-quality
+single-cell dataset.
+
+=== DATASET CONTEXT & PUBLICATION ===
+
+The dataset used in this example comes from the following publication:
+de Vrij et al. (2024) Commun Biol. "Persistent T cell unresponsiveness 
+associated with chronic visceral leishmaniasis in HIV-coinfected patients."
+Link: https://www.nature.com/articles/s42003-024-06225-2
+
+Biological Background:
+A large proportion of HIV-coinfected visceral leishmaniasis (VL) patients 
+exhibit a chronic disease course with frequent recurrence of VL. The study 
+analyzed circulatory immune cells (blood) of a longitudinal HIV cohort in 
+Ethiopia, comparing asymptomatically Leishmania-infected individuals with 
+active VL-HIV patients. The authors observed that VL chronicity was 
+associated with persistent CD8+ T cell exhaustion and CD4+ T cell anergy, 
+characterized by high expression of PD-1 and TIGIT.
+
+Dataset Technical Specs:
+- Technology: 10x Genomics 5' v1
+- Tissue: Blood (PBMC)
+- This dataset is ideal for SACI because the modern sequencing chemistry 
+  and sufficient read depth allow biologically meaningful marker genes to 
+  form clear, statistically robust bimodal distributions. Unlike sparse 
+  legacy datasets (e.g. 10x 3' v2 like PBMC 3k), SACI runs perfectly here 
+  with its default, strict parameters.
+
+Pipeline steps:
+1. Data preprocessing and dynamic dataset download
 2. SACI Hierarchical Clustering with CoB rescue
 3. Extracting the optimal subset of genes (Levels 0-2)
 4. Running UMAP with the optimal subset
