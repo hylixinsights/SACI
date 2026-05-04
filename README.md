@@ -51,7 +51,7 @@ adata, all_genes, labels = model.fit_transform(adata)
 
 # 4. Filter genes from the top levels (Optimal strategy for UMAP)
 top_genes = list(adata.var_names[
-    (adata.var['rmgs_selected']) & (adata.var['rmgs_level'] <= 2)
+    (adata.var['saci_selected']) & (adata.var['saci_level'] <= 2)
 ])
 
 # 5. Standard downstream analysis

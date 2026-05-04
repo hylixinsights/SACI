@@ -1,8 +1,8 @@
 """
 recursive.py - Recursive Hierarchical Clustering Guided by Bimodality
 
-Uses MGS bimodality detection as both a gene selector and a stopping
-criterion for recursive cluster subdivision. At each tree level, MGS
+Uses SaciBimodal bimodality detection as both a gene selector and a stopping
+criterion for recursive cluster subdivision. At each tree level, SaciBimodal
 runs on only the cells in that branch:
     - If bimodal genes are found → substructure exists → split
     - If no bimodal genes → cluster is homogeneous → stop (leaf)
@@ -22,16 +22,16 @@ from .bimodal import SaciBimodal
 
 class SACI:
     """
-    Hierarchical clustering guided by MGS bimodality detection.
+    Hierarchical clustering guided by SaciBimodal bimodality detection.
 
-    Recursively subdivides cell clusters using MGS+CoB gene selection
+    Recursively subdivides cell clusters using SaciBimodal+CoB gene selection
     at each level. The number of bimodal genes found within a cluster
     serves as a natural stopping criterion: no bimodal genes = pure cluster.
 
     Parameters
     ----------
     min_genes_to_split : int, default=5
-        Minimum number of strictly bimodal genes MGS must find within
+        Minimum number of strictly bimodal genes SaciBimodal must find within
         a cluster to justify splitting it further.
     min_cells_to_split : int, default=30
         Minimum cells in a cluster to attempt subdivision.
@@ -44,9 +44,9 @@ class SACI:
     cob_n_target_genes : int or None, default=None
         Target genes for CoB adaptive cascade at each level.
     verbose_depth : int, default=2
-        Show detailed MGS output only for levels <= this depth.
-    mgs_kw : dict
-        Additional keyword arguments forwarded to the internal MGS
+        Show detailed SaciBimodal output only for levels <= this depth.
+    bimodal_kw : dict
+        Additional keyword arguments forwarded to the internal SaciBimodal
         constructor (e.g., dip_pval_threshold, min_bic_delta, etc.).
 
     Attributes
@@ -68,7 +68,7 @@ class SACI:
         cob: bool = True,
         cob_n_target_genes: int | None = None,
         verbose_depth: int = 2,
-        **mgs_kw,
+        **bimodal_kw,
     ):
         self.min_genes_to_split = min_genes_to_split
         self.min_cells_to_split = min_cells_to_split
@@ -77,7 +77,7 @@ class SACI:
         self.cob = cob
         self.cob_n_target_genes = cob_n_target_genes
         self.verbose_depth = verbose_depth
-        self.mgs_kw = mgs_kw
+        self.bimodal_kw = bimodal_kw
 
         self.tree_: dict = {}
         self.all_genes_: list[str] = []
@@ -143,20 +143,20 @@ class SACI:
                     print(f"{indent}  → LEAF (max depth)")
                 continue
 
-            # --- Run MGS (+CoB) on subset ---
+            # --- Run SaciBimodal (+CoB) on subset ---
             adata_sub = adata[cell_idx].copy()
 
             selector = SaciBimodal(
                 cob=self.cob,
                 cob_n_target_genes=self.cob_n_target_genes,
-                **self.mgs_kw,
+                **self.bimodal_kw,
             )
 
             sub_verbose = verbose and depth < self.verbose_depth
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 try:
-                    mgs_genes = selector.fit(adata_sub, verbose=sub_verbose)
+                    bimodal_genes = selector.fit(adata_sub, verbose=sub_verbose)
                 except Exception as e:
                     self._make_leaf(tree, node_id, depth, cell_idx, [],
                                     f"error: {e}", cell_labels)
@@ -170,12 +170,12 @@ class SACI:
             if verbose:
                 print(
                     f"{indent}  Found {n_bimodal} bimodal genes "
-                    f"({len(mgs_genes)} total selected)"
+                    f"({len(bimodal_genes)} total selected)"
                 )
 
             # --- Stopping: not enough bimodal genes ---
             if n_bimodal < self.min_genes_to_split:
-                self._make_leaf(tree, node_id, depth, cell_idx, mgs_genes,
+                self._make_leaf(tree, node_id, depth, cell_idx, bimodal_genes,
                                 "few_bimodal_genes", cell_labels)
                 if verbose:
                     print(
@@ -185,7 +185,7 @@ class SACI:
                 continue
 
             # Record newly discovered genes
-            for g in mgs_genes:
+            for g in bimodal_genes:
                 if g not in all_genes_set:
                     all_genes_set.add(g)
                     all_genes_ordered.append(g)
@@ -193,16 +193,16 @@ class SACI:
 
             # --- PCA → neighbors → Leiden ---
             if verbose:
-                print(f"{indent}  Splitting ({len(mgs_genes)} genes)...")
+                print(f"{indent}  Splitting ({len(bimodal_genes)} genes)...")
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                adata_sub_g = adata_sub[:, mgs_genes].copy()
+                adata_sub_g = adata_sub[:, bimodal_genes].copy()
                 sc.pp.scale(adata_sub_g)
-                n_comps = min(30, len(mgs_genes) - 1, n - 1)
+                n_comps = min(30, len(bimodal_genes) - 1, n - 1)
                 if n_comps < 2:
                     self._make_leaf(tree, node_id, depth, cell_idx,
-                                    mgs_genes, "too_few_pcs", cell_labels)
+                                    bimodal_genes, "too_few_pcs", cell_labels)
                     if verbose:
                         print(f"{indent}  → LEAF (too few PCs)")
                     continue
@@ -219,7 +219,7 @@ class SACI:
 
             # --- Stopping: Leiden can't split ---
             if n_clusters < 2:
-                self._make_leaf(tree, node_id, depth, cell_idx, mgs_genes,
+                self._make_leaf(tree, node_id, depth, cell_idx, bimodal_genes,
                                 "leiden_no_split", cell_labels)
                 if verbose:
                     print(f"{indent}  → LEAF (Leiden couldn't split)")
@@ -252,9 +252,9 @@ class SACI:
                 "children": children,
                 "depth": depth,
                 "n_cells": n,
-                "n_genes_found": len(mgs_genes),
+                "n_genes_found": len(bimodal_genes),
                 "n_bimodal_strict": n_bimodal,
-                "genes_top10": mgs_genes[:10],
+                "genes_top10": bimodal_genes[:10],
                 "is_leaf": False,
                 "leaf_reason": None,
             }
@@ -283,14 +283,14 @@ class SACI:
         Run fit() and annotate adata.
 
         Adds:
-            adata.obs['rmgs_cluster'] : hierarchical leaf labels
-            adata.obs['rmgs_depth']   : depth at which cell's cluster
+            adata.obs['saci_cluster']  : hierarchical leaf labels
+            adata.obs['saci_depth']    : depth at which cell's cluster
                                          became a leaf
-            adata.var['rmgs_selected']: True for genes at any level
-            adata.var['rmgs_level']   : tree level where gene was
+            adata.var['saci_selected'] : True for genes at any level
+            adata.var['saci_level']    : tree level where gene was
                                          first discovered (-1 if never)
-            adata.uns['rmgs_tree']    : tree dict
-            adata.uns['rmgs_genes']   : ordered gene list
+            adata.uns['saci_tree']     : tree dict
+            adata.uns['saci_genes']    : ordered gene list
 
         Returns
         -------
@@ -298,26 +298,42 @@ class SACI:
         """
         all_genes, labels = self.fit(adata, verbose=verbose)
 
-        adata.obs["rmgs_cluster"] = pd.Categorical(labels)
+        adata.obs["saci_cluster"] = pd.Categorical(labels)
 
         # Depth per cell from tree
         depth_map = {}
         for node in self.tree_.values():
             if node["is_leaf"]:
                 depth_map[node["node_id"]] = node["depth"]
-        adata.obs["rmgs_depth"] = [
+        adata.obs["saci_depth"] = [
             depth_map.get(lbl, -1) for lbl in labels
         ]
 
         # Gene annotations
-        adata.var["rmgs_selected"] = adata.var_names.isin(all_genes)
+        adata.var["saci_selected"] = adata.var_names.isin(all_genes)
         level_series = pd.Series(
             self._gene_level_
         ).reindex(adata.var_names).fillna(-1).astype(int)
-        adata.var["rmgs_level"] = level_series.values
+        adata.var["saci_level"] = level_series.values
 
-        adata.uns["rmgs_tree"] = self.tree_
-        adata.uns["rmgs_genes"] = all_genes
+        adata.uns["saci_tree"] = self.tree_
+        adata.uns["saci_genes"] = all_genes
+
+        # Backward-compatible aliases (rmgs_* → saci_*)
+        # These will be removed in a future major release.
+        adata.obs["rmgs_cluster"] = adata.obs["saci_cluster"]
+        adata.obs["rmgs_depth"] = adata.obs["saci_depth"]
+        adata.var["rmgs_selected"] = adata.var["saci_selected"]
+        adata.var["rmgs_level"] = adata.var["saci_level"]
+        adata.uns["rmgs_tree"] = adata.uns["saci_tree"]
+        adata.uns["rmgs_genes"] = adata.uns["saci_genes"]
+        warnings.warn(
+            "The 'rmgs_' prefix in adata keys (e.g. rmgs_cluster) is "
+            "deprecated and will be removed in the next major release. "
+            "Please update your code to use 'saci_' (e.g. saci_cluster).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         return adata, all_genes, labels
 

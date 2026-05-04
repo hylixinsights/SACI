@@ -2,7 +2,7 @@
 cob.py - Co-expression Binary Rescue Module
 
 Detects modules of genes that are co-expressed (ON/OFF) in the same
-rare cell populations. Rescues marker genes that MGS misses because
+rare cell populations. Rescues marker genes that SaciBimodal misses because
 their non-zero expression distribution is unimodal.
 
 Supports two modes:
@@ -36,7 +36,7 @@ class SaciCoB:
 
     Identifies modules of genes that share binary ON/OFF patterns
     across cells, rescuing rare-population markers that bimodality-based
-    methods (like MGS) miss by design.
+    methods (like SaciBimodal) miss by design.
 
     Parameters
     ----------
@@ -121,7 +121,7 @@ class SaciCoB:
         adata : AnnData
             Single-cell data (log-normalized).
         exclude_genes : list[str] or None
-            Genes already selected (e.g., by MGS). Excluded from
+            Genes already selected (e.g., by SaciBimodal). Excluded from
             CoB candidates to avoid redundancy.
         verbose : bool
             Show progress and summary.

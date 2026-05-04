@@ -126,7 +126,7 @@ def main():
     sc.pl.umap(adata_final, color='leiden_final', ax=axes[0], show=False,
                title='Standard Leiden (res=0.4)')
 
-    sc.pl.umap(adata_final, color='rmgs_cluster', ax=axes[1], show=False,
+    sc.pl.umap(adata_final, color='saci_cluster', ax=axes[1], show=False,
                title='SACI Hierarchical Clusters')
 
     plt.tight_layout()
@@ -139,8 +139,8 @@ def main():
     ]
     print("\nCanonical PBMC markers discovered:")
     for gene in markers_to_check:
-        if gene in adata.var_names and adata.var.loc[gene, 'rmgs_selected']:
-            level = adata.var.loc[gene, 'rmgs_level']
+        if gene in adata.var_names and adata.var.loc[gene, 'saci_selected']:
+            level = adata.var.loc[gene, 'saci_level']
             print(f"  ✅ {gene}: Found at Level {int(level)}")
         else:
             print(f"  ❌ {gene}: Not selected")

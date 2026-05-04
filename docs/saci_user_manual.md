@@ -33,10 +33,10 @@ selector = SaciBimodal(dip_pval_threshold=0.2, min_bic_delta=10.0)
 - `cob_n_target_genes (int, None)`: Target for adaptive cascade.
 
 **Annotations added to adata.var:**
-- `'mgs_score'`: Composite bimodality score.
-- `'mgs_selected'`: Boolean, True if selected by SaciBimodal.
-- `'mgs_delta_bic'`: BIC difference (k=2 vs k=1).
-- `'selection_source'`: 'mgs', 'cob', or 'both'.
+- `'saci_score'`: Composite bimodality score.
+- `'saci_selected'`: Boolean, True if selected by SaciBimodal.
+- `'saci_delta_bic'`: BIC difference (k=2 vs k=1).
+- `'selection_source'`: 'bimodal', 'cob', or 'both'.
 
 #### 2.2 SaciCoB
 
@@ -72,10 +72,14 @@ from saci import SACI
 - `cob (bool, True)`: Enable CoB at each level.
 
 **Annotations added to adata:**
-- `adata.obs['rmgs_cluster']`: Hierarchical leaf labels (e.g., "0.1.2").
-- `adata.obs['rmgs_depth']`: Depth at which cell became a leaf.
-- `adata.var['rmgs_selected']`: True for genes at any tree level.
-- `adata.var['rmgs_level']`: Tree level where gene first discovered.
+- `adata.obs['saci_cluster']`: Hierarchical leaf labels (e.g., "0.1.2").
+- `adata.obs['saci_depth']`: Depth at which cell became a leaf.
+- `adata.var['saci_selected']`: True for genes at any tree level.
+- `adata.var['saci_level']`: Tree level where gene first discovered.
+
+> **Note:** Legacy keys with `rmgs_` prefix (e.g. `rmgs_cluster`) are still
+> populated for backward compatibility, but are deprecated and will be
+> removed in a future major release.
 
 **Stopping criteria:**
 - `too_few_cells`: Cluster has < `min_cells_to_split` cells.

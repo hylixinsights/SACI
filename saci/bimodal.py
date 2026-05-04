@@ -21,7 +21,7 @@ from .scoring import dip_test, fit_gmm, multimodal_score
 
 class SaciBimodal:
     """
-    Multimodal Gene Selector for scRNA-seq data.
+    Bimodality-based gene selector for scRNA-seq data.
 
     Selects genes with bimodal/multimodal expression distributions
     as candidates for cluster-defining marker genes, providing a
@@ -75,11 +75,11 @@ class SaciBimodal:
     Examples
     --------
     >>> import scanpy as sc
-    >>> from mgs import MGS
+    >>> from saci import SaciBimodal
     >>> adata = sc.datasets.pbmc3k()
     >>> sc.pp.normalize_total(adata)
     >>> sc.pp.log1p(adata)
-    >>> selector = MGS()
+    >>> selector = SaciBimodal()
     >>> genes = selector.fit(adata)
     >>> print(f"Selected {len(genes)} genes")
     >>> selector.plot_score_distribution()
@@ -156,7 +156,7 @@ class SaciBimodal:
         n_cells, n_genes = X.shape
 
         if verbose:
-            print(f"MGS: {n_cells} cells × {n_genes} genes")
+            print(f"SaciBimodal: {n_cells} cells × {n_genes} genes")
             print(f"  dip_pval_threshold  = {self.dip_pval_threshold}")
             print(f"  min_bic_delta       = {self.min_bic_delta}")
             print(f"  min_peak_separation = {self.min_peak_separation}")
@@ -240,7 +240,7 @@ class SaciBimodal:
         if verbose:
             print(f"\n  Skipped (low expression): {skipped_low_expr}")
             print(f"  Passed dip pre-filter:    {(df['filter_reason'] == 'passed').sum()}")
-            print(f"  Selected genes (MGS):     {len(self.selected_genes_)}")
+            print(f"  Selected genes (bimodal): {len(self.selected_genes_)}")
 
         # --- CoB rescue (if enabled) ---
         if self.cob:
@@ -263,14 +263,14 @@ class SaciBimodal:
             )
             self.cob_selector_ = cob_sel
 
-            # Merge: MGS genes first, then CoB rescued genes
+            # Merge: bimodal genes first, then CoB rescued genes
             combined = list(dict.fromkeys(
                 self.selected_genes_ + cob_genes
             ))
 
             if verbose:
-                print(f"\n  === MGS + CoB Union ===")
-                print(f"  MGS genes:     {len(self.selected_genes_)}")
+                print(f"\n  === SaciBimodal + CoB Union ===")
+                print(f"  Bimodal genes: {len(self.selected_genes_)}")
                 print(f"  CoB rescued:   {len(cob_genes)}")
                 print(f"  Total (union): {len(combined)}")
 
@@ -283,12 +283,12 @@ class SaciBimodal:
         Run fit() and add results to adata.var and adata.uns.
 
         Adds:
-            adata.var['mgs_score']       : multimodal score (NaN if not tested)
-            adata.var['mgs_selected']    : bool, True if selected
-            adata.var['mgs_dip_pval']    : dip test p-value
-            adata.var['mgs_delta_bic']   : BIC delta
-            adata.uns['mgs_params']      : dict of parameters used
-            adata.uns['mgs_genes']       : list of selected genes
+            adata.var['saci_score']       : multimodal score (NaN if not tested)
+            adata.var['saci_selected']    : bool, True if selected
+            adata.var['saci_dip_pval']    : dip test p-value
+            adata.var['saci_delta_bic']   : BIC delta
+            adata.uns['saci_params']      : dict of parameters used
+            adata.uns['saci_genes']       : list of selected genes
 
         Returns
         -------
@@ -299,16 +299,16 @@ class SaciBimodal:
         # Map results back to adata.var
         df = self.results_.set_index("gene")
         for col, var_key in [
-            ("multimodal_score", "mgs_score"),
-            ("dip_pval", "mgs_dip_pval"),
-            ("delta_bic", "mgs_delta_bic"),
-            ("peak_separation", "mgs_peak_separation"),
+            ("multimodal_score", "saci_score"),
+            ("dip_pval", "saci_dip_pval"),
+            ("delta_bic", "saci_delta_bic"),
+            ("peak_separation", "saci_peak_separation"),
         ]:
             adata.var[var_key] = df[col].reindex(adata.var_names).values
 
-        adata.var["mgs_selected"] = adata.var_names.isin(genes)
+        adata.var["saci_selected"] = adata.var_names.isin(genes)
 
-        adata.uns["mgs_params"] = {
+        adata.uns["saci_params"] = {
             "dip_pval_threshold": self.dip_pval_threshold,
             "min_bic_delta": self.min_bic_delta,
             "min_peak_separation": self.min_peak_separation,
@@ -316,7 +316,7 @@ class SaciBimodal:
             "n_top_genes": self.n_top_genes,
             "cob": self.cob,
         }
-        adata.uns["mgs_genes"] = genes
+        adata.uns["saci_genes"] = genes
 
         # Annotate CoB results if enabled
         if self.cob and self.cob_selector_ is not None:
@@ -340,7 +340,7 @@ class SaciBimodal:
                 adata.var["cob_module_id"] = -1
 
             # Determine selection source for each gene
-            is_mgs = adata.var_names.isin(
+            is_bimodal = adata.var_names.isin(
                 [g for g in genes if g not in cob_genes]
             )
             is_cob = adata.var_names.isin(
@@ -348,10 +348,10 @@ class SaciBimodal:
                     self.results_["filter_reason"] == "passed"
                 ]["gene"].tolist()]
             )
-            is_both = adata.var["mgs_selected"] & adata.var["cob_selected"]
+            is_both = adata.var["saci_selected"] & adata.var["cob_selected"]
             source = pd.Series("none", index=adata.var_names)
-            source[adata.var["mgs_selected"] & ~adata.var["cob_selected"]] = "mgs"
-            source[~adata.var["mgs_selected"] & adata.var["cob_selected"]] = "cob"
+            source[adata.var["saci_selected"] & ~adata.var["cob_selected"]] = "bimodal"
+            source[~adata.var["saci_selected"] & adata.var["cob_selected"]] = "cob"
             source[is_both] = "both"
             adata.var["selection_source"] = source.values
 

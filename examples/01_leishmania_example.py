@@ -96,7 +96,7 @@ def main():
 
     # Optimal Subset: Levels 0-2
     top_genes_02 = list(adata.var_names[
-        (adata.var['rmgs_selected']) & (adata.var['rmgs_level'] <= 2)
+        (adata.var['saci_selected']) & (adata.var['saci_level'] <= 2)
     ])
     print(f"Selected optimal genes (Levels 0-2): {len(top_genes_02)}")
 

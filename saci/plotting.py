@@ -1,10 +1,10 @@
 """
-plotting.py - Visualization utilities for MGS
+plotting.py - Visualization utilities for SACI
 
 Functions:
     plot_gene_distribution   : histogram + GMM overlay for individual genes
     plot_score_distribution  : score waterfall / ranked plot
-    plot_umap_comparison     : side-by-side UMAP using HVGs vs MGS genes
+    plot_umap_comparison     : side-by-side UMAP using HVGs vs SACI genes
 """
 
 from __future__ import annotations
@@ -109,7 +109,7 @@ def plot_gene_distribution(
     for ax in axes[n:]:
         ax.set_visible(False)
 
-    fig.suptitle("MGS — Gene Expression Distributions", fontsize=13, y=1.02)
+    fig.suptitle("SACI — Gene Expression Distributions", fontsize=13, y=1.02)
     plt.tight_layout()
     if show:
         plt.show()
@@ -122,7 +122,7 @@ def plot_score_distribution(selector, top_n: int = 50, show: bool = True):
 
     Parameters
     ----------
-    selector : fitted MGS instance
+    selector : fitted SaciBimodal instance
     top_n : how many top genes to label
     show : call plt.show()
 
@@ -154,7 +154,7 @@ def plot_score_distribution(selector, top_n: int = 50, show: bool = True):
 
     ax.set_xlabel("Genes (ranked by multimodal score)")
     ax.set_ylabel("Multimodal Score")
-    ax.set_title("MGS — Ranked Gene Scores\n(red = selected, blue = not selected)")
+    ax.set_title("SACI — Ranked Gene Scores\n(red = selected, blue = not selected)")
 
     from matplotlib.patches import Patch
     legend_elements = [
@@ -171,11 +171,11 @@ def plot_score_distribution(selector, top_n: int = 50, show: bool = True):
 
 def plot_umap_comparison(adata, hvg_key: str = "highly_variable", show: bool = True):
     """
-    Side-by-side UMAP: HVGs vs MGS-selected genes.
+    Side-by-side UMAP: HVGs vs SACI-selected genes.
 
     Requires:
         - adata.obsm['X_umap_hvg'] : UMAP computed from HVGs
-        - adata.obsm['X_umap_mgs'] : UMAP computed from MGS genes
+        - adata.obsm['X_umap_saci'] : UMAP computed from SACI genes
         - adata.obs['leiden'] or similar cluster label
 
     Parameters
@@ -190,10 +190,10 @@ def plot_umap_comparison(adata, hvg_key: str = "highly_variable", show: bool = T
     """
     import scanpy as sc
 
-    if "X_umap_hvg" not in adata.obsm or "X_umap_mgs" not in adata.obsm:
+    if "X_umap_hvg" not in adata.obsm or "X_umap_saci" not in adata.obsm:
         raise ValueError(
             "Run compute_both_umaps(adata, selector) first to populate "
-            "adata.obsm['X_umap_hvg'] and adata.obsm['X_umap_mgs']."
+            "adata.obsm['X_umap_hvg'] and adata.obsm['X_umap_saci']."
         )
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
@@ -206,7 +206,7 @@ def plot_umap_comparison(adata, hvg_key: str = "highly_variable", show: bool = T
 
     for ax, (umap_key, title) in zip(
         axes,
-        [("X_umap_hvg", "HVG-based UMAP"), ("X_umap_mgs", "MGS-based UMAP")]
+        [("X_umap_hvg", "HVG-based UMAP"), ("X_umap_saci", "SACI-based UMAP")]
     ):
         coords = adata.obsm[umap_key]
         if cluster_key:
@@ -230,7 +230,7 @@ def plot_umap_comparison(adata, hvg_key: str = "highly_variable", show: bool = T
         ax.set_xticks([])
         ax.set_yticks([])
 
-    plt.suptitle("UMAP Comparison: HVG vs MGS Gene Selection", fontsize=13)
+    plt.suptitle("UMAP Comparison: HVG vs SACI Gene Selection", fontsize=13)
     plt.tight_layout()
     if show:
         plt.show()
@@ -239,18 +239,18 @@ def plot_umap_comparison(adata, hvg_key: str = "highly_variable", show: bool = T
 
 def compute_both_umaps(adata, selector, n_neighbors: int = 15, n_pcs: int = 30):
     """
-    Helper: compute UMAPs for both HVG and MGS gene sets and store in adata.
+    Helper: compute UMAPs for both HVG and SACI gene sets and store in adata.
 
     Parameters
     ----------
     adata : AnnData (log-normalized)
-    selector : fitted MGS instance
+    selector : fitted SaciBimodal instance
     n_neighbors : for sc.pp.neighbors
     n_pcs : PCs to use
 
     Returns
     -------
-    adata with obsm['X_umap_hvg'] and obsm['X_umap_mgs'] populated
+    adata with obsm['X_umap_hvg'] and obsm['X_umap_saci'] populated
     """
     import scanpy as sc
 
@@ -263,13 +263,13 @@ def compute_both_umaps(adata, selector, n_neighbors: int = 15, n_pcs: int = 30):
     sc.tl.umap(adata_hvg)
     adata.obsm["X_umap_hvg"] = adata_hvg.obsm["X_umap"]
 
-    print("Computing MGS-based UMAP...")
-    mgs_genes = selector.selected_genes_
-    adata_mgs = adata[:, mgs_genes].copy()
-    sc.pp.scale(adata_mgs)
-    sc.tl.pca(adata_mgs, n_comps=min(n_pcs, len(mgs_genes) - 1))
-    sc.pp.neighbors(adata_mgs, n_neighbors=n_neighbors)
-    sc.tl.umap(adata_mgs)
-    adata.obsm["X_umap_mgs"] = adata_mgs.obsm["X_umap"]
+    print("Computing SACI-based UMAP...")
+    saci_genes = selector.selected_genes_
+    adata_saci = adata[:, saci_genes].copy()
+    sc.pp.scale(adata_saci)
+    sc.tl.pca(adata_saci, n_comps=min(n_pcs, len(saci_genes) - 1))
+    sc.pp.neighbors(adata_saci, n_neighbors=n_neighbors)
+    sc.tl.umap(adata_saci)
+    adata.obsm["X_umap_saci"] = adata_saci.obsm["X_umap"]
 
     return adata
